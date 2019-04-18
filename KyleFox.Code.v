@@ -110,7 +110,6 @@ module accumulatorB(in, acc, clk, reset);
 	end
 endmodule
 
-module resetOP();
 
 module testbench1;
 
