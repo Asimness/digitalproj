@@ -139,9 +139,9 @@ module accumulatorB(rst, state);
 	reg state;
 	always@(*) begin
 		if(rst)
-			#5 state = 1'b1;
+			state = 1'b1;
 		else
-			#5 state = rst;
+			#5 state = 1'b0;
 	end
 endmodule
 
@@ -149,19 +149,24 @@ endmodule
 module testbench1;
 
     reg[15:0] x, y;									// 2 16 bit inputs x,y
+	reg[15:0] x1,y1;
     reg[2:0] op;       								// 3 bit op code (4th bit for while loop comparison)
 
+	reg[8*8:0] str;
+	reg[8*8:0] str2;
+	
     wire signed [16:0] out;   						// Signed 17 bit output (for possible negative numbers after subtraction)
 	wire rst;
 	wire prev;
 	wire next;
-    ALU16bit test1(x,y,op[2:0],out,rst);			// Instance of 16 bit ALU 2x1 MUX
 	
+    ALU16bit test1(x,y,op[2:0],out,rst);			// Instance of 16 bit ALU 2x1 MUX
 	accumulatorB currentState(rst, next);
     
     initial begin
-		#5 x = 16'h0001; y = 16'hFFFF; op = 3'b0;	// Set values x,y and start op code at 000
-		//#5 x = 16'h0008; y = 16'h0003; op = 3'b0;
+		#5 x = 16'h0001; y = 16'hFFFF; op = 3'b0;x1 = 16'h0008; y1 = 16'h0003; 	// Set values x,y and start op code at 000
+		
+		
 		
 		$display("16-Bit ALU");						// Header to display functions
 		$display("Math Functions");
@@ -176,87 +181,93 @@ module testbench1;
 		$display("0111 ~x NOT\n");
     
 													// Labels
-        #5 $display("Num 1                    Num 2                         Operation Current Output                      Next State ");
+        #5 $display("Num 1                    Num 2                    Operation     Current Output                      Next State ");
         
 
 		forever
         begin
            
 			#5 $write("%b", x, " (", "%d", x, ") ", "%b", y, " (", "%d", y, ") ", "%b", (op));
+			if (next)
+				str = "ERROR";
+			else
+				str = "Running";
+			if (rst)
+				str2 = "ERROR";
+			else
+				str2 = "Running";
 			case(op)
 				3'b000:
 					begin
-						$write(" (Add)      Running "); 
+						$write(" (Add)     Running "); 
 						if (rst)
 							begin
-								$display("XXXXXXXXXXXXXXXXX (Nan)     ERROR");
+								$display("XXXXXXXXXXXXXXXXX (Nan) %s", str2);
 								
 							end
 						else
-							$display("%b", out, " (", "%d", out, ")  Running");
+							$display("%b", out, " (", "%d", out, ")  %s", str2);
 					end
 				3'b001:
 					begin
-						if (rst)
-							$write(" (Sub)   ERROR   ");
+						if (next)
+							$write(" (Sub) %s   ", str);
 						else
-							$write(" (Sub)      Running ");
+							$write(" (Sub)     %s ", str);
 						if (rst)
 							begin
-								$display("XXXXXXXXXXXXXXXXX (Nan)     ERROR");
+								$display("XXXXXXXXXXXXXXXXX (Nan) $s", str2);
 
 							end
 						else
-							$display("%b", out, " (", "%d", out, ")  Running");
+							$display("%b", out, " (", "%d", out, ")%s", str2);
 					end
 				3'b010:
 					begin
-						if (rst)
-							$write(" (Left)  ERROR   ");
+						if (next)
+							$write(" (Left) %s ", str);
 						else
-							$write(" (Left)     Running ");	
-						$display("%b", out, " (", "%d", out, ")  Running");
+							$write(" (Left)  %s ", str);	
+						$display("%b", out, " (", "%d", out, ")%s", str2);
 					end
 				3'b011:
 					begin
-						$write(" (Right)    Running ");
+						$write(" (Right)   Running ");
 						$display("%b", out, " (", "%d", out, ")  Running");
 					end
 				3'b100:
 					begin
-						$write(" (AND)      Running ");
+						$write(" (AND)     Running ");
 
 						$display("%b", out, " (", "%d", out, ")  Running");
 					end
 				3'b101:
 					begin
-						$write(" (OR)       Running ");
+						$write(" (OR)      Running ");
 
 						$display("%b", out, " (", "%d", out, ")  Running");
 					end
 				3'b110:
 					begin
-						$write(" (XOR)      Running ");
+						$write(" (XOR)     Running ");
 
 						$display("%b", out, " (", "%d", out, ")  Running");
 					end
 				3'b111:
 					begin
-						$write(" (NOT)      Running ");
-							$display("%b", out, " (", "%d", out, ")  Running");
+						$write(" (NOT)     Running ");
+							$display("%b", out, " (", "%d", out, ")  Running\n");
 					end
 				endcase
        
        
         #5 op=op+3'b001;									// Increment op code by 1 for next operation
         end
-        
-        //$display("");
-		
+          
       
     end
 	initial begin
-		#90 $finish;
+		#170 $finish;
 	end
 endmodule
 
