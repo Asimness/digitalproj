@@ -44,12 +44,12 @@ module ALU16bit(x,y,op,out,rst);
 				// ERROR check for underflow from subtraction
 				if (s1s0 == 2'b01)
 					begin
-						if (out >= 17'b01111111111111111)
+						if (out >= 17'b01111111111111111)		// Check inverse for overflow (underflow when negated)
 							begin
 								out=17'b00000000000000000;
 								rst=1'b1; // Set error flag
 							end
-						// If negative, invert output	
+						// If negative, invert output to get negative number	
 						else if (y>x)
 							out=~(out);
 					end
@@ -75,7 +75,7 @@ module mathOP(x,y,s1s0,out);
 			out=(x+y);
         2'b01: 										// Subtraction
 			begin
-				if (y>x)				
+				if (y>x)							// Negative output subtraction
 					out=((~x)+y);
 				else								// Regular subtraction
 					out=(x-y);	
@@ -152,15 +152,12 @@ module testbench1;
 
     wire signed [16:0] out;   						// Signed 17 bit output (for possible negative numbers after subtraction)
 	
-	
 	wire prev;
 	wire next;
 	
 	
     ALU16bit test1(x,y,op[2:0],out,rst);			// Instance of 16 bit ALU 2x1 MUX
 	
-	
-	//accumulatorA nextState(out,result,1'b0);
 	accumulatorB currentState(next,rst);
 	
     
@@ -181,7 +178,7 @@ module testbench1;
 		$display("0111 ~x NOT\n");
     
 													// Labels
-        #5 $display("Num 1                      Num 2                      Operation    Current Output                      Next State ");
+        #5 $display("Num 1                    Num 2                         Operation Current Output                      Next State ");
         
 
 		forever
@@ -191,7 +188,7 @@ module testbench1;
 			case(op)
 				3'b000:
 					begin
-						$write(" (Add)   Running "); 
+						$write(" (Add)      Running "); 
 						if (rst)
 							begin
 								$display("XXXXXXXXXXXXXXXXX (Nan)     ERROR");
@@ -205,7 +202,7 @@ module testbench1;
 						if (rst)
 							$write(" (Sub)   ERROR   ");
 						else
-							$write(" (Sub)   Running ");
+							$write(" (Sub)      Running ");
 						if (rst)
 							begin
 								$display("XXXXXXXXXXXXXXXXX (Nan)     ERROR");
@@ -219,35 +216,35 @@ module testbench1;
 						if (rst)
 							$write(" (Left)  ERROR   ");
 						else
-							$write(" (Left)  Running ");	
+							$write(" (Left)     Running ");	
 						$display("%b", out, " (", "%d", out, ")  Running");
 					end
 				3'b011:
 					begin
-						$write(" (Right) Running ");
+						$write(" (Right)    Running ");
 						$display("%b", out, " (", "%d", out, ")  Running");
 					end
 				3'b100:
 					begin
-						$write(" (AND)   Running ");
+						$write(" (AND)      Running ");
 
 						$display("%b", out, " (", "%d", out, ")  Running");
 					end
 				3'b101:
 					begin
-						$write(" (OR)    Running ");
+						$write(" (OR)       Running ");
 
 						$display("%b", out, " (", "%d", out, ")  Running");
 					end
 				3'b110:
 					begin
-						$write(" (XOR)   Running ");
+						$write(" (XOR)      Running ");
 
 						$display("%b", out, " (", "%d", out, ")  Running");
 					end
 				3'b111:
 					begin
-						$write(" (NOT)   Running ");
+						$write(" (NOT)      Running ");
 							$display("%b", out, " (", "%d", out, ")  Running");
 					end
 				endcase
