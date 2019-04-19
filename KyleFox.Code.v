@@ -147,15 +147,15 @@ module accumulatorA(in, acc, reset);
 endmodule
 
 //module to save the output value
-module accumulatorB(rst, state);
-	input rst;
+module accumulatorB(clk, rst, state);
+	input clk, rst;
 	output state;
 	reg state;
-	always@(*) begin
+	always@(clk) begin
 		if(rst)
 			state = 1'b1;
 		else
-			#5 state = 1'b0;
+			state = 1'b0;
 	end
 endmodule
 
@@ -181,7 +181,7 @@ module testbench1;
 	Clock c0(clock);
 	
     ALU16bit test1(x,y,op[2:0],out,rst);			// Instance of 16 bit ALU 2x1 MUX
-	accumulatorB currentState(rst, next);
+	accumulatorB currentState(clock, rst, next);
 	
 	
 	initial begin
