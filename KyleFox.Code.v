@@ -15,8 +15,9 @@ module ALU16bit(x,y,op,out,rst);
 	
 	output reg [16:0] out;							// 17 bit output (17th bit for negative numbers)
 	output reg rst;									// 1 bit error flag for overflow/underflow for add/sub
+
 	
-	wire [16:0] math1;								// 17 bit wire connecting to the mathOP module/MUX output
+	wire[16:0] math1;								// 17 bit wire connecting to the mathOP module/MUX output
 	wire [16:0] logic1;								// 17 bit wire connecting to the logicOP module/MUX output
 	wire s2 = op[2];								// 1 bit select input
 	wire [1:0] s1s0 = op[1:0];						// 2 bit select input for the mathOP and logicOP modules/MUX
@@ -132,15 +133,15 @@ module accumulatorA(in, acc, reset);
 endmodule
 
 //module to save the output value
-module accumulatorB(acc, rst);
+module accumulatorB(rst, state);
 	input rst;
-	output  acc;
-	reg acc;
+	output state;
+	reg state;
 	always@(*) begin
 		if(rst)
-			acc <= 1'b1;
+			#5 state = 1'b1;
 		else
-			acc <= rst;
+			#5 state = rst;
 	end
 endmodule
 
@@ -151,15 +152,12 @@ module testbench1;
     reg[2:0] op;       								// 3 bit op code (4th bit for while loop comparison)
 
     wire signed [16:0] out;   						// Signed 17 bit output (for possible negative numbers after subtraction)
-	
+	wire rst;
 	wire prev;
 	wire next;
-	
-	
     ALU16bit test1(x,y,op[2:0],out,rst);			// Instance of 16 bit ALU 2x1 MUX
 	
-	accumulatorB currentState(next,rst);
-	
+	accumulatorB currentState(rst, next);
     
     initial begin
 		#5 x = 16'h0001; y = 16'hFFFF; op = 3'b0;	// Set values x,y and start op code at 000
