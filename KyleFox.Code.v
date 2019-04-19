@@ -7,6 +7,20 @@
    16 bit ALU
 */
 
+module Clock(clock);					
+output reg clock;
+	initial							
+		begin
+			clock = 0;					
+		end
+		
+	always							
+		begin
+			#5 clock = ~clock;			
+		end
+		
+endmodule
+
 
 module ALU16bit(x,y,op,out,rst);
 	input [15:0] x;									// 2 16 bit inputs x,y 
@@ -152,122 +166,132 @@ module testbench1;
 	reg[15:0] x1,y1;
     reg[2:0] op;       								// 3 bit op code (4th bit for while loop comparison)
 
-	reg[8*8:0] str;
-	reg[8*8:0] str2;
+	reg[7*8:0] str;
+	reg[7*8:0] str2;
+	reg[5*8:0] opr;
+	reg start;
 	
     wire signed [16:0] out;   						// Signed 17 bit output (for possible negative numbers after subtraction)
 	wire rst;
 	wire prev;
-	wire next;
+	wire next; //prevReset
+	
+	wire clock;
+	
+	Clock c0(clock);
 	
     ALU16bit test1(x,y,op[2:0],out,rst);			// Instance of 16 bit ALU 2x1 MUX
 	accumulatorB currentState(rst, next);
-    
-    initial begin
-		#5 x = 16'h0001; y = 16'hFFFF; op = 3'b0;x1 = 16'h0008; y1 = 16'h0003; 	// Set values x,y and start op code at 000
-		
-		
-		
-		$display("16-Bit ALU");						// Header to display functions
-		$display("Math Functions");
-		$display("0000 x + y Add");
-		$display("0001 x - y Sub");
-		$display("0010 x << 1 Shift Left");
-		$display("0011 x >> 1 Shift Right");
-		$display("Logic Functions");
-		$display("0100 x & y AND");
-		$display("0101 x | y OR");
-		$display("0110 x ^ y XOR");
-		$display("0111 ~x NOT\n");
-    
-													// Labels
-        #5 $display("Num 1                    Num 2                    Operation     Current Output                      Next State ");
-        
-
-		forever
-        begin
-           
-			#5 $write("%b", x, " (", "%d", x, ") ", "%b", y, " (", "%d", y, ") ", "%b", (op));
-			if (next)
-				str = "ERROR";
-			else
-				str = "Running";
-			if (rst)
-				str2 = "ERROR";
-			else
-				str2 = "Running";
-			case(op)
-				3'b000:
-					begin
-						$write(" (Add)     Running "); 
-						if (rst)
-							begin
-								$display("XXXXXXXXXXXXXXXXX (Nan) %s", str2);
-								
-							end
-						else
-							$display("%b", out, " (", "%d", out, ")  %s", str2);
-					end
-				3'b001:
-					begin
-						if (next)
-							$write(" (Sub) %s   ", str);
-						else
-							$write(" (Sub)     %s ", str);
-						if (rst)
-							begin
-								$display("XXXXXXXXXXXXXXXXX (Nan) $s", str2);
-
-							end
-						else
-							$display("%b", out, " (", "%d", out, ")%s", str2);
-					end
-				3'b010:
-					begin
-						if (next)
-							$write(" (Left) %s ", str);
-						else
-							$write(" (Left)  %s ", str);	
-						$display("%b", out, " (", "%d", out, ")%s", str2);
-					end
-				3'b011:
-					begin
-						$write(" (Right)   Running ");
-						$display("%b", out, " (", "%d", out, ")  Running");
-					end
-				3'b100:
-					begin
-						$write(" (AND)     Running ");
-
-						$display("%b", out, " (", "%d", out, ")  Running");
-					end
-				3'b101:
-					begin
-						$write(" (OR)      Running ");
-
-						$display("%b", out, " (", "%d", out, ")  Running");
-					end
-				3'b110:
-					begin
-						$write(" (XOR)     Running ");
-
-						$display("%b", out, " (", "%d", out, ")  Running");
-					end
-				3'b111:
-					begin
-						$write(" (NOT)     Running ");
-							$display("%b", out, " (", "%d", out, ")  Running\n");
-					end
-				endcase
-       
-       
-        #5 op=op+3'b001;									// Increment op code by 1 for next operation
-        end
-          
-      
-    end
+	
+	
 	initial begin
-		#170 $finish;
+	//cases for each trial
+    forever
+      begin
+		//open ALU to op
+		//set A and B
+		
+		//set op to add
+		#10 x = 16'h0001; y = 16'hFFFF; op = 3'b0;opr="Add";str2="Running";start=1;
+		#10 op=op+3'b001;opr="Sub";
+		#10 op=op+3'b001;opr="Left";
+		#10 op=op+3'b001;opr="Right";
+		#10 op=op+3'b001;opr="AND";
+		#10 op=op+3'b001;opr="OR";
+		#10 op=op+3'b001;opr="XOR";
+		#10 op=op+3'b001;opr="NOT";
+		#10 x = 16'h00E1; y = 16'h0B01; op = 3'b0;str="Running";opr="Add";start=1; $display("");
+		#10 op=op+3'b001;opr="Sub";
+		#10 op=op+3'b001;opr="Left";
+		#10 op=op+3'b001;opr="Right";
+		#10 op=op+3'b001;opr="AND";
+		#10 op=op+3'b001;opr="OR";
+		#10 op=op+3'b001;opr="XOR";
+		#10 op=op+3'b001;opr="NOT";
+		
+		/*
+		#10 x = 16'h0001; y = 16'h0001; op = 3'b0;
+		#10 op=op+3'b001;
+		#10 op=op+3'b001;
+		#10 op=op+3'b001;
+		#10 op=op+3'b001;
+		#10 op=op+3'b001;
+		#10 op=op+3'b001;
+		#10 op=op+3'b001;
+		*/
+		
+		/*
+		//set op to subtract
+		#5 s=1;
+		//set values of A and B
+		#5 a= 8; b=5; 
+		//set op to shift A left
+		#5 s=2;
+		//set op to shift A Right
+		#5 s=3;
+		//set op to AND A and B
+		#5 s=4;
+		//set op to OR A and B
+		#5 s=5;
+		//set op to XOR A and B
+		#5 s=6;
+		//set op to NOT A
+		#5 s=7;
+		#5 r=1;
+		*/
+	
+      end
+    end
+	
+	
+	 //Display Forever
+	initial begin
+		//display variable names
+		#1 $display("16-Bit ALU");                        // Header to display functions
+        $display("Math Functions");
+        $display("0000 x + y Add");
+        $display("0001 x - y Sub");
+        $display("0010 x << 1 Shift Left");
+        $display("0011 x >> 1 Shift Right");
+        $display("Logic Functions");
+        $display("0100 x & y AND");
+        $display("0101 x | y OR");
+        $display("0110 x ^ y XOR");
+        $display("0111 ~x NOT\n");
+
+                                                    // Labels
+        #5 $display("Num 1                    Num 2                    Operation    Current Output                     Next State ");
+
+		//$display("%b    |%b    |%b(%d)|%b(%d)|%b(%d)   |%b(%d),%b        ",clock,rst,x,x,y,y,op,op,out,out,next);
+		forever
+		begin
+		//display output
+		//#5		$display("%b    |%b    |%b(%d)|%b(%d)|%b(%d)   |%b(%d),%b        ",clock,rst,x,x,y,y,op,op,out,out,next);
+			#5  if (next && start == 0)
+					str = "ERROR";
+				else
+					begin
+						str = "Running";
+						start = 0;
+					end
+				if (rst)
+					str2 = "ERROR";
+				else
+					str2 = "Running";
+			$display("%b", x, " (", "%d", x, ") ", "%b", y, " (", "%d", y, ") ", "%b",(op)," (%s)", opr,"%s", str," %b",out," (%d)",out, "%s", str2);
+			//$display("     |     |                       |                       |         |                        | ");
+		
+
+		end	
+		
 	end
+
+
+	///Shutoff
+	initial begin
+		#170
+		$finish;
+	end  
+	
 endmodule
 
