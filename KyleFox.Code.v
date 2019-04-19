@@ -7,28 +7,16 @@
    16 bit ALU
 */
 
-module Clock(clock);					
-output reg clock;
-	initial							
-		begin
-			clock = 0;					
-		end
-		
-	always							
-		begin
-			#5 clock = ~clock;			
-		end
-		
-endmodule
 
 
-module ALU16bit(x,y,op,out,rst);
+module ALU16bit(x,y,op,out,err);
 	input [15:0] x;									// 2 16 bit inputs x,y 
 	input [15:0] y;
 	input [2:0] op;									// 3 bit op code input (only 1 select bit for this 2x1 MUX)
 	
+	
 	output reg [16:0] out;							// 17 bit output (17th bit for negative numbers)
-	output reg rst;									// 1 bit error flag for overflow/underflow for add/sub
+	output reg err;									// 1 bit error flag for overflow/underflow for add/sub
 
 	
 	wire[16:0] math1;								// 17 bit wire connecting to the mathOP module/MUX output
@@ -41,7 +29,7 @@ module ALU16bit(x,y,op,out,rst);
 
 	always @(*)
 	begin 
-		rst=1'b0;									// Default no error, set rst flag to 0
+		err=1'b0;									// Default no error, set err flag to 0
 		
 		if (s2 == 0)								// Select input for math function (add, sub, shift left, shift right)
 			begin
@@ -53,7 +41,7 @@ module ALU16bit(x,y,op,out,rst);
 						if (out >= 17'b01111111111111111)
 							begin
 								out=17'b00000000000000000;
-								rst=1'b1; // Set error flag
+								err=1'b1; // Set error flag
 							end
 					end
 				// ERROR check for underflow from subtraction
@@ -62,7 +50,7 @@ module ALU16bit(x,y,op,out,rst);
 						if (out >= 17'b01111111111111111)		// Check inverse for overflow (underflow when negated)
 							begin
 								out=17'b00000000000000000;
-								rst=1'b1; // Set error flag
+								err=1'b1; // Set error flag
 							end
 						// If negative, invert output to get negative number	
 						else if (y>x)
@@ -129,34 +117,44 @@ module logicOP(x,y,s1s0,out);
 	end
 endmodule
 
-
-
-
-//module to save the output value
-module accumulatorA(in, acc, reset);
-	input [16:0] in;
-	input  reset;
-	output [16:0] acc;
-	reg [16:0] acc;
-	always@(*) begin
-		if(reset)
-			acc <= 8'b00000000;
-		else
-			acc <= in;
-	end
+module Clock(clock);					
+output reg clock;
+	initial							
+		begin
+			clock = 0;					
+		end
+		
+	always							
+		begin
+			#5 clock = ~clock;			
+		end
+		
 endmodule
 
-//module to save the output value
-module accumulatorB(clk, rst, state);
-	input clk, rst;
+module accumulator(clk, err, state);
+	input clk, err;
 	output state;
 	reg state;
 	always@(clk) begin
-		if(rst)
+		if(err)
 			state = 1'b1;
 		else
 			state = 1'b0;
 	end
+endmodule
+
+module reset(clear,out,result);
+	input clear;
+	input[16:0] out;
+	output reg [16:0] result;
+	always@(*)
+	begin
+		if(clear)
+			result=17'b00000000000000000;
+		else
+			result=out;
+	end
+
 endmodule
 
 
@@ -170,28 +168,23 @@ module testbench1;
 	reg[7*8:0] str2;
 	reg[5*8:0] opr;
 	reg start;
+	reg clear;
 	
     wire signed [16:0] out;   						// Signed 17 bit output (for possible negative numbers after subtraction)
-	wire rst;
+	wire err;
 	wire prev;
-	wire next; //prevReset
-	
+	wire next;
 	wire clock;
+	wire signed [16:0] result;
 	
 	Clock c0(clock);
-	
-    ALU16bit test1(x,y,op[2:0],out,rst);			// Instance of 16 bit ALU 2x1 MUX
-	accumulatorB currentState(clock, rst, next);
-	
+    ALU16bit test1(x,y,op[2:0],out,err);			// Instance of 16 bit ALU 2x1 MUX
+	accumulator currentState(clock, err, next);
+	reset reset1(clear,out,result);
 	
 	initial begin
-	//cases for each trial
     forever
       begin
-		//open ALU to op
-		//set A and B
-		
-		//set op to add
 		#10 x = 16'h0001; y = 16'hFFFF; op = 3'b0;opr="Add";str2="Running";start=1;
 		#10 op=op+3'b001;opr="Sub";
 		#10 op=op+3'b001;opr="Left";
@@ -200,7 +193,8 @@ module testbench1;
 		#10 op=op+3'b001;opr="OR";
 		#10 op=op+3'b001;opr="XOR";
 		#10 op=op+3'b001;opr="NOT";
-		#10 x = 16'h00E1; y = 16'h0B01; op = 3'b0;str="Running";opr="Add";start=1; $display("");
+		#10 clear=1;opr="CLEAR";
+		#10 x = 16'h00E1; y = 16'h0B01; op = 3'b0;str="Running";opr="Add";start=1; $display("");clear=0;
 		#10 op=op+3'b001;opr="Sub";
 		#10 op=op+3'b001;opr="Left";
 		#10 op=op+3'b001;opr="Right";
@@ -208,46 +202,15 @@ module testbench1;
 		#10 op=op+3'b001;opr="OR";
 		#10 op=op+3'b001;opr="XOR";
 		#10 op=op+3'b001;opr="NOT";
+		#10 clear=1;opr="CLEAR";
 		
-		/*
-		#10 x = 16'h0001; y = 16'h0001; op = 3'b0;
-		#10 op=op+3'b001;
-		#10 op=op+3'b001;
-		#10 op=op+3'b001;
-		#10 op=op+3'b001;
-		#10 op=op+3'b001;
-		#10 op=op+3'b001;
-		#10 op=op+3'b001;
-		*/
-		
-		/*
-		//set op to subtract
-		#5 s=1;
-		//set values of A and B
-		#5 a= 8; b=5; 
-		//set op to shift A left
-		#5 s=2;
-		//set op to shift A Right
-		#5 s=3;
-		//set op to AND A and B
-		#5 s=4;
-		//set op to OR A and B
-		#5 s=5;
-		//set op to XOR A and B
-		#5 s=6;
-		//set op to NOT A
-		#5 s=7;
-		#5 r=1;
-		*/
 	
       end
     end
 	
 	
-	 //Display Forever
 	initial begin
-		//display variable names
-		#1 $display("16-Bit ALU");                        // Header to display functions
+		#1 $display("16-Bit ALU");                        	// Header to display functions
         $display("Math Functions");
         $display("0000 x + y Add");
         $display("0001 x - y Sub");
@@ -259,28 +222,23 @@ module testbench1;
         $display("0110 x ^ y XOR");
         $display("0111 ~x NOT\n");
 
-                                                    // Labels
-        #5 $display("Num 1                    Num 2                    Operation    Current Output                     Next State ");
-
-		//$display("%b    |%b    |%b(%d)|%b(%d)|%b(%d)   |%b(%d),%b        ",clock,rst,x,x,y,y,op,op,out,out,next);
+															// Labels
+        #5 $display("Num 1                    Num 2                    Operation    Current Output                     Next State Clock");
 		forever
 		begin
-		//display output
-		//#5		$display("%b    |%b    |%b(%d)|%b(%d)|%b(%d)   |%b(%d),%b        ",clock,rst,x,x,y,y,op,op,out,out,next);
-			#5  if (next && start == 0)
+		
+			#5  if (next && start == 0)						// Current state
 					str = "ERROR";
 				else
 					begin
 						str = "Running";
 						start = 0;
 					end
-				if (rst)
+				if (err)									// Next State
 					str2 = "ERROR";
 				else
 					str2 = "Running";
-			$display("%b", x, " (", "%d", x, ") ", "%b", y, " (", "%d", y, ") ", "%b",(op)," (%s)", opr,"%s", str," %b",out," (%d)",out, "%s", str2);
-			//$display("     |     |                       |                       |         |                        | ");
-		
+			$display("%b", x, " (", "%d", x, ") ", "%b", y, " (", "%d", y, ") ", "%b",(op)," (%s)", opr,"%s", str," %b",result," (%d)",result, "%s", str2, "    %b",clock);
 
 		end	
 		
@@ -289,7 +247,7 @@ module testbench1;
 
 	///Shutoff
 	initial begin
-		#170
+		#190
 		$finish;
 	end  
 	
